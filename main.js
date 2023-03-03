@@ -13,7 +13,7 @@ function getRandomDescription(){
 }
 
 function getRandomMessage(){
-    const messages = ['Все відмінно!', 'Загалом все непогано. Але не всі.', 'Коли ви робите фотографію, добре б прибирати палець із кадру. Зрештою, це просто непрофесійно.', 'Моя бабуся випадково чхнула з фотоапаратом у руках і у неї вийшла фотографія краща.', 'Я послизнувся на банановій шкірці і впустив фотоапарат на кота і у мене вийшла фотографія краще.', 'Обличчя людей на фотці перекошені, ніби їх побивають. Як можна було зловити такий невдалий момент?', 'Супер фото!', 'Вау!', 'Прекрасно!'];
+    const messages = ['Все відмінно!', 'Дуже гарно!', 'Мені подобається!', 'Гарно', 'Неперевершено', 'Супер', 'Супер фото!', 'Вау!', 'Прекрасно!', 'Яка фотка!', 'Nice!', 'Wow!', 'Perfect!'];
     const randomArrayMessage = getRandomNumber(0, messages.length);
     return messages[randomArrayMessage];
 };
@@ -37,29 +37,64 @@ const createPhotos = new Array(25).fill(null).map((_, index) => ({
     url: `photos/${index+1}.jpg`,
     description: getRandomDescription(),
     likes: getRandomNumber(15, 201), 
-    comments: shuffle(createComments)[getRandomNumber(5, 25)],
-})); 
+    comments: shuffle(createComments).slice(0, getRandomNumber(5, 25)),   
+    filter: '',
+    scale: 100,
+    hashtags: '',
+
+}));  
 
 function shuffle(array) {   
     return array.sort(() => Math.random() - 0.5);
 }
 
-fs.writeFileSync('photos.txt', JSON.stringify(createPhotos));
+const photos = fs.readFileSync('photos.txt', 'utf8');
+
+    fs.writeFileSync('photos.txt', JSON.stringify(createPhotos));
+
+
 
 fs.writeFileSync('comments.txt', JSON.stringify(createComments));
 
 http.createServer((req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
-
     const url = req.url;
-    if(url === '/photos'){
-        const photos = fs.readFileSync('photos.txt', 'utf8');
-        res.end(photos);
-    } else if(url === '/comments'){
-        const comments = fs.readFileSync('comments.txt', 'utf8');
-        res.end(comments);
-    } else if(photos.status !== 200){
-        res.end(`Sorry, there was an error`);
-    }
+    let method = req.method
+    switch(method){
+        case 'POST':
+            
+            if(url === '/newphoto'){        
+                let body = ''; 
+                req.on('data', function(data) {
+                    body += data.toString()                             
+                  });
+                 
+                  req.on('end', function() {
+                const newData = JSON.parse(body);
+                const photosUpdate = JSON.parse(fs.readFileSync('photos.txt'));
+                photosUpdate.push(newData);
+
+                
     
+                fs.writeFileSync('photos.txt', JSON.stringify(photosUpdate));
+                res.write(JSON.stringify(fs.readFileSync('photos.txt')));
+                res.end()
+                  })
+            }        
+            break;
+        case 'GET': 
+        if(url === '/photos'){         
+            res.end(photos);
+        } else if(url === '/comments'){
+            const comments = fs.readFileSync('comments.txt', 'utf8');
+            res.end(comments);
+        } else if(photos.status !== 200){
+            res.end(`Sorry, there was an error`);
+        }
+        break;
+
+
+    }
+ 
 }).listen(8000);
+
